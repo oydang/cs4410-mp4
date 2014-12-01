@@ -84,8 +84,8 @@ class LFSClass:
 
     # write all in memory data structures to disk
     def sync(self):
-        # XXX - do this tomorrow! after the meteor shower!
-        pass
+        InodeMap.inodemap.save_inode_map(Inode.getmaxinode())
+        Segment.segmentmanager.flush()
 
     # restore in memory data structures (e.g. inode map) from disk
     def restore(self):
