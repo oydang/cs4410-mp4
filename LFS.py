@@ -102,6 +102,7 @@ class LFSClass:
     # else return None
     def searchfiledir(self, path):  
         # XXXDONE - do this tomorrow! after the meteor shower!
+        if path == '/': return 1
 
         if path[-1] == '/':
             path = path[0:-1]      #Truncate trailing '/'
@@ -111,7 +112,7 @@ class LFSClass:
         dirs = path.split('/')
         
         #Start at root inode
-        currinodeaddress = InodeMap.lookup(1)
+        currinodeaddress = InodeMap.inodemap.lookup(1)
         currinode = Inode(str=Segment.segmentmanager.blockread(currinodeaddress))
 
         #Go through directories in path
@@ -127,10 +128,8 @@ class LFSClass:
             else: 
                 if dirs[-1] != dirname:
                     return None
-
         return currinode.id
 
-                
 
     # add the new directory entry to the data blocks,
     # write the modified inode to the disk,

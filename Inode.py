@@ -67,7 +67,7 @@ class Inode:
                 #Need to create indirect block
                 self.indirectblock = Segment.segmentmanager.write_to_newblock(newdata)
             else:
-                Segment.segmentmanager.blockwrite(self.indirectblock, newdata):
+                Segment.segmentmanager.blockwrite(self.indirectblock, newdata)
             pass
 
     def _datablockexists(self, blockoffset):
