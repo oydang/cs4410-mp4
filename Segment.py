@@ -18,6 +18,7 @@ class SegmentManagerClass:
 
     # write the given data to a free block in the current segment.
     # if no free block exists, find another segment with a free block in it
+    # Return address of block
     def write_to_newblock(self, data):
         # XXX - do this tomorrow! after the meteor shower!
         pass

@@ -2,6 +2,7 @@
 import sys, struct
 import Segment
 import InodeMap
+import re
 
 from threading import Thread, Lock, Condition, Semaphore
 from Segment import SegmentManagerClass
@@ -100,17 +101,36 @@ class LFSClass:
     # return its inode number if the file or directory exists,
     # else return None
     def searchfiledir(self, path):  
-        # XXX - do this tomorrow! after the meteor shower!
+        # XXXDONE - do this tomorrow! after the meteor shower!
 
         if path[-1] == '/':
             path = path[0:-1]      #Truncate trailing '/'
-        dirs = path.rsplit('/')
-        if dirs[0] != '':
-            return None
-        rootinode = InodeMap.lookup(1)
-        for d in dirs:
-            rootinode.read()
+        if path[0] == '/':
+            path = path[1:]         #Truncate leading '/'
 
+        dirs = path.split('/')
+        
+        #Start at root inode
+        currinodeaddress = InodeMap.lookup(1)
+        currinode = Inode(str=Segment.segmentmanager.blockread(currinodeaddress))
+
+        #Go through directories in path
+        for dirname in dirs:
+            if currinode.isDirectory:
+                contents = currinode.read(0, 10000000) #Extract the directory contents
+                nextinodeid = re.findall('%s(\d+)' % dirname, contents)
+                if len(nextinodeid) > 0:
+                    nextinodeid = nextinodeid[0]
+                    currinode = Inode(str = Segment.segmentmanager.blockread(InodeMap.lookup(nextinodeid)))
+                else:
+                    return None
+            else: 
+                if dirs[-1] != dirname:
+                    return None
+
+        return currinode.id
+
+                
 
     # add the new directory entry to the data blocks,
     # write the modified inode to the disk,

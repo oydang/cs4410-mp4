@@ -34,7 +34,7 @@ class Inode:
             self.id = inodeidpool
             inodeidpool += 1
             self.filesize = 0
-            self.fileblocks = [0] * NUMDIRECTBLOCKS
+            self.fileblocks = [0] * NUMDIRECTBLOCKS #direct blocks
             self.indirectblock = 0
             self.isDirectory = isdirectory
             # write the new inode to disk
@@ -62,6 +62,12 @@ class Inode:
             self.fileblocks[blockoffset] = blockaddress
         else:
             # XXX - do this after the meteor shower!
+            newdata = struct.pack(blockoffset, blockaddress)
+            if self.indirectblock == 0:
+                #Need to create indirect block
+                self.indirectblock = Segment.segmentmanager.write_to_newblock(newdata)
+            else:
+                Segment.segmentmanager.blockwrite(self.indirectblock, newdata):
             pass
 
     def _datablockexists(self, blockoffset):
@@ -69,6 +75,9 @@ class Inode:
             return self.fileblocks[blockoffset] != 0
         else:
             # XXX - do this after the meteor shower!
+            if self.indirectblock == 0:
+                return False
+            Segment.segmentmanager.blockread(self.indirectblock)
             pass
 
     # given the number of a data block inside a file, i.e. 0 for

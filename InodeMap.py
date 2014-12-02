@@ -36,7 +36,7 @@ class InodeMapClass:
         iminode = Inode() #Create empty iNode
         iminode.write(0, serialMap, False) #Write inode map 
         iminodeloc = InodeMap.lookup(iminode.id)
-        Segment.segmentmanager.update_inodemap_position(iminodeloc, self.generationcount):
+        Segment.segmentmanager.update_inodemap_position(iminodeloc, self.generationcount)
 
     # go through all segments, find the
     # most recent segment, and read the latest valid inodemap
