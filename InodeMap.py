@@ -30,10 +30,13 @@ class InodeMapClass:
     # segment
     def save_inode_map(self, iip):
         self.generationcount += 1
-        str = struct.pack("I", iip) # Save maximum inodenumber
+        serialMap = struct.pack("I", iip) # Save maximum inodenumber
         for (key, val) in self.mapping.items():
-            str += struct.pack("II", key, val)
-        return str, self.generationcount
+            serialMap += struct.pack("II", key, val)
+        iminode = Inode() #Create empty iNode
+        iminode.write(0, serialMap, False) #Write inode map 
+        iminodeloc = InodeMap.lookup(iminode.id)
+        Segment.segmentmanager.update_inodemap_position(iminodeloc, self.generationcount):
 
     # go through all segments, find the
     # most recent segment, and read the latest valid inodemap

@@ -49,6 +49,7 @@ class SegmentManagerClass:
             print "Assertion error 1: data being written to segment is not the right size (%d != %d)" % (len(data), len(self.currentseg.blocks[blockoffset]))
         else:
             self.currentseg.blocks[blockoffset] = data
+            
     def read_in_place(self, blockno):
         if DEBUG:
             print "Reading block #%d from the segment" % blockno

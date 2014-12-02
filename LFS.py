@@ -84,6 +84,7 @@ class LFSClass:
 
     # write all in memory data structures to disk
     def sync(self):
+        # XXXDONE - do this tomorrow! after the meteor shower!
         InodeMap.inodemap.save_inode_map(Inode.getmaxinode())
         Segment.segmentmanager.flush()
 
@@ -98,9 +99,18 @@ class LFSClass:
     # for a given file or directory named by path,
     # return its inode number if the file or directory exists,
     # else return None
-    def searchfiledir(self, path):
+    def searchfiledir(self, path):  
         # XXX - do this tomorrow! after the meteor shower!
-        pass
+
+        if path[-1] == '/':
+            path = path[0:-1]      #Truncate trailing '/'
+        dirs = path.rsplit('/')
+        if dirs[0] != '':
+            return None
+        rootinode = InodeMap.lookup(1)
+        for d in dirs:
+            rootinode.read()
+
 
     # add the new directory entry to the data blocks,
     # write the modified inode to the disk,
