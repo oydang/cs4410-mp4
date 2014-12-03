@@ -84,14 +84,11 @@ class Inode:
         if blockoffset < NUMDIRECTBLOCKS:
             return self.fileblocks[blockoffset] != 0
         else:
-            print('DOIN INDIRECT _datablockexists')
             # XXX - do this after the meteor shower!
             if self.indirectblock == 0 or blockoffset > (NUMDIRECTBLOCKS + NUM_INDIRECTBLOCKS):
                 return False
             blockoffset -=  NUMDIRECTBLOCKS   #Now the indirect block offset
-            print 'dafuq' + Segment.segmentmanager.blockread(self.indirectblock)
             mappings = list(struct.unpack("%dI" % NUM_INDIRECTBLOCKS, Segment.segmentmanager.blockread(self.indirectblock)))
-            print('mappings is ' + str(mappings))
             return mappings[blockoffset]
 
     # given the number of a data block inside a file, i.e. 0 for
@@ -101,7 +98,6 @@ class Inode:
         if blockoffset < len(self.fileblocks):
             blockid = self.fileblocks[blockoffset]
         else:
-            print('DOIN INDIRECT _getdatablockcontents')
             blockid = self._datablockexists(blockoffset)
             if not blockid:
                 return None

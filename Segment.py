@@ -23,7 +23,7 @@ class SegmentManagerClass:
         # XXXDONE - do this tomorrow! after the meteor shower!
         #First try to write to new block in current segment
         blockaddr = self.currentseg.write_to_newblock(data)
-        if blockaddr < 0:
+        while blockaddr <= 0:
             #No free blocks in current segment
             self.flush()
             #Create new currentseg
