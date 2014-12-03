@@ -17,6 +17,7 @@ class DirectoryDescriptor(FileDescriptor):
     def enumerate(self):
         length = self.getlength()
         numentries = length / (FILENAMELEN + 4)  # a directory entry is a filename and an integer for the inode number
+        print ("numentries is %d", numentries)
         for i in range(0, numentries):
             data = self.read(FILENAMELEN + 4)
             name, inode = struct.unpack("%dsI" % (FILENAMELEN,), data[0:(FILENAMELEN + 4)])

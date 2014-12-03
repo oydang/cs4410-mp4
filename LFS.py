@@ -80,8 +80,8 @@ class LFSClass:
 
     # delete the given file
     def unlink(self, pathname):
-        # XXX - do this tomorrow! after the meteor shower!
-        pass
+        # XXXDONE - do this tomorrow! after the meteor shower!
+        p = find_
 
     # write all in memory data structures disk
     def sync(self):
@@ -109,21 +109,22 @@ class LFSClass:
     def searchfiledir(self, path):  
         # XXXDONE - do this tomorrow! after the meteor shower!
         if path == '/': return 1
+        needDir = False
 
+        #There's a trailing '/'
         if path[-1] == '/':
-            path = path[0:-1]      #Truncate trailing '/'
-        if path[0] == '/':
-            path = path[1:]         #Truncate leading '/'
-
-        dirs = path.split('/')
+            needDir = True
+            path = path[0:-1]
+        dirs = get_path_components(path)
+        #print 'dirs is ' + str(list(dirs))
         
         #Start at root inode
         currinodeno = 1
         currinode = Inode(str=Segment.segmentmanager.blockread(InodeMap.inodemap.lookup(1)))
 
-
         #Go through directories in path
         for dirname in dirs:
+            print('dirname is %s' % dirname)
             foundmatch = False
             if currinode.isDirectory:
                 dd = DirectoryDescriptor(currinodeno)
@@ -135,9 +136,11 @@ class LFSClass:
                         break
                 if not foundmatch:
                     return None
-            else: 
-                if dirs[-1] != dirname:
+            else:
+                #It's a file 
+                if dirs[-1] != dirname or needDir:
                     return None
+        print "found!!!"
         return currinode.id
 
 

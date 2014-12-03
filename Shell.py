@@ -49,6 +49,7 @@ class Shell:
         if brandnew:
             rootinode=Inode(isdirectory=True)
         else:
+            print ('restoring it!!!')
             LFS.filesystem.restore()
 
     def create(self, args):
