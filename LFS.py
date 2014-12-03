@@ -87,6 +87,21 @@ class LFSClass:
         parentdd = self.open(find_parent_name(pathname), True)
         parentdd.delete_entry(find_filename(pathname))
 
+    # delete a directory if it's empty
+    def delete_directory(self, pathname):
+        inodenumber = self.searchfiledir(pathname)
+        if inodenumber is None:
+            raise FileSystemException("Directory Does Not Exist")
+        dd = self.open(pathname, True)
+        parentdd = self.open(find_parent_name(pathname), True)
+        filecount = 0
+        for filename, inode in dd.enumerate():
+            filecount += 1
+        if filecount == 0:
+            parentdd.delete_entry(find_filename(pathname))
+        else:
+            raise FileSystemException("Can Only Delete Empty Directory")
+
 
     # write all in memory data structures disk
     def sync(self):

@@ -114,9 +114,9 @@ class Shell:
         LFS.filesystem.unlink(path)
 
     def rmdir(self, args):
-        # XXX - do this tomorrow! after the meteor shower!
+        # XXXDONE - do this tomorrow! after the meteor shower!
         path = canonicalize(args[1], self.currentDirectory)
-        LFS.filesystem.unlink(path)
+        LFS.filesystem.delete_directory(path)
 
     def quit(self, args):
         print "\nSo Long, and Thanks for All the Fish!"

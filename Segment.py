@@ -20,7 +20,7 @@ class SegmentManagerClass:
     # if no free block exists, find another segment with a free block in it
     # Return address of block
     def write_to_newblock(self, data):
-        # XXX - do this tomorrow! after the meteor shower!
+        # XXXDONE - do this tomorrow! after the meteor shower!
         #First try to write to new block in current segment
         blockaddr = self.currentseg.write_to_newblock(data)
         if blockaddr < 0:
@@ -31,8 +31,6 @@ class SegmentManagerClass:
             self.currentseg = SegmentClass(self.segcounter)
             blockaddr = self.currentseg.write_to_newblock(data)
         return blockaddr
-
-
 
     # read the requested block if it is in memory, if not, read it from disk
     def blockread(self, blockno):

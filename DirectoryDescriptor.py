@@ -14,6 +14,7 @@ class DirectoryDescriptor(FileDescriptor):
         if not inodeobject.isDirectory:
             raise FileSystemException("Not a directory - inode %d" % inodenumber)
 
+    #Only enumerate the directory's legitimate, undeleted contents
     def enumerate(self):
         length = self.getlength()
         numentries = length / (FILENAMELEN + 4)  # a directory entry is a filename and an integer for the inode number
@@ -22,9 +23,7 @@ class DirectoryDescriptor(FileDescriptor):
             data = self.read(FILENAMELEN + 4)
             name, inode = struct.unpack("%dsI" % (FILENAMELEN,), data[0:(FILENAMELEN + 4)])
             name = name.strip('\x00')
-            print 'DAH DATAS NAME IS %s' %  data
             if data != DELETEDFILE:      #If the file hasn't been deleted before
-                print('not a deleted file!!')
                 yield name, inode
 
     def delete_entry(self, filename):

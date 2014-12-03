@@ -7,6 +7,7 @@ from InodeMap import InodeMapClass
 from Constants import BLOCKSIZE
 
 NUMDIRECTBLOCKS = 100 # can have as many as 252 and still fit an Inode in a 1024 byte block
+NUM_INDIRECTBLOCKS = 256 # Because an indirect block can hold 256 ints (256 = 1024/4)
 inodeidpool = 1  # 1 is reserved for the root inode
 
 def getmaxinode():
@@ -36,6 +37,7 @@ class Inode:
             self.filesize = 0
             self.fileblocks = [0] * NUMDIRECTBLOCKS #direct blocks
             self.indirectblock = 0
+            self.indirectdatacount = 0
             self.isDirectory = isdirectory
             # write the new inode to disk
             InodeMap.inodemap.update_inode(self.id, self.serialize())
@@ -57,28 +59,40 @@ class Inode:
     # physical address for that block, updates the inode to
     # point to that particular block
     def _adddatablock(self, blockoffset, blockaddress):
-        if blockoffset < len(self.fileblocks):
+        if blockoffset < NUMDIRECTBLOCKS:
             # place this block in one of the direct data blocks
             self.fileblocks[blockoffset] = blockaddress
         else:
-            # XXX - do this after the meteor shower!
-            newdata = struct.pack(blockoffset, blockaddress)
+            # XXXDONE - do this after the meteor shower!
+            blockoffset -=  NUMDIRECTBLOCKS     #Now the indirect block offset
             if self.indirectblock == 0:
                 #Need to create indirect block
-                self.indirectblock = Segment.segmentmanager.write_to_newblock(newdata)
+                fileblocks = [0] * NUM_INDIRECTBLOCKS
+                fileblocks[blockoffset] = blockaddress
+                data = struct.pack("%dI" % NUM_INDIRECTBLOCKS, *fileblocks)
+                self.indirectblock = Segment.segmentmanager.write_to_newblock(data)
             else:
+                #Update old <blockoffset, blockaddr> mappings
+                oldmappings = list(struct.unpack("%dI" % NUM_INDIRECTBLOCKS, Segment.segmentmanager.blockread(self.indirectblock)))
+                oldmappings[blockoffset] = blockaddress
+                newdata = struct.pack("%dI" % NUM_INDIRECTBLOCKS, *oldmappings)
                 Segment.segmentmanager.blockwrite(self.indirectblock, newdata)
-            pass
 
+
+    #Return the address of the blockoffset^th block
     def _datablockexists(self, blockoffset):
-        if blockoffset < len(self.fileblocks):
+        if blockoffset < NUMDIRECTBLOCKS:
             return self.fileblocks[blockoffset] != 0
         else:
+            print('DOIN INDIRECT _datablockexists')
             # XXX - do this after the meteor shower!
-            if self.indirectblock == 0:
+            if self.indirectblock == 0 or blockoffset > (NUMDIRECTBLOCKS + NUM_INDIRECTBLOCKS):
                 return False
-            Segment.segmentmanager.blockread(self.indirectblock)
-            pass
+            blockoffset -=  NUMDIRECTBLOCKS   #Now the indirect block offset
+            print 'dafuq' + Segment.segmentmanager.blockread(self.indirectblock)
+            mappings = list(struct.unpack("%dI" % NUM_INDIRECTBLOCKS, Segment.segmentmanager.blockread(self.indirectblock)))
+            print('mappings is ' + str(mappings))
+            return mappings[blockoffset]
 
     # given the number of a data block inside a file, i.e. 0 for
     # the first block, 1 for the second and so forth, returns
@@ -87,8 +101,10 @@ class Inode:
         if blockoffset < len(self.fileblocks):
             blockid = self.fileblocks[blockoffset]
         else:
-            # XXX - do this after the meteor shower!
-            pass
+            print('DOIN INDIRECT _getdatablockcontents')
+            blockid = self._datablockexists(blockoffset)
+            if not blockid:
+                return None
         return Segment.segmentmanager.blockread(blockid)
 
     # perform a read of the file/directory pointed to by
