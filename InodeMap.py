@@ -1,5 +1,6 @@
 import struct
 import Segment
+
 from Segment import SegmentClass
 
 # the task of the InodeMap is to map inodes to their
@@ -33,10 +34,7 @@ class InodeMapClass:
         serialMap = struct.pack("I", iip) # Save maximum inodenumber
         for (key, val) in self.mapping.items():
             serialMap += struct.pack("II", key, val)
-        iminode = Inode() #Create empty iNode
-        iminode.write(0, serialMap, False) #Write inode map 
-        iminodeloc = InodeMap.lookup(iminode.id)
-        Segment.segmentmanager.update_inodemap_position(iminodeloc, self.generationcount)
+        return serialMap, self.generationcount
 
     # go through all segments, find the
     # most recent segment, and read the latest valid inodemap

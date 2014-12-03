@@ -37,7 +37,7 @@ class LFSClass:
     # open an existing file or directory
     def open(self, path, isdir=False):
         inodenumber = self.searchfiledir(path)
-        if inodenumber is None:
+        if inodenumber is None:                                         
             raise FileSystemException("Path Does Not Exist")
         # create and return a Descriptor of the right kind
         if isdir:
@@ -46,7 +46,7 @@ class LFSClass:
             return FileDescriptor(inodenumber)
 
     def create(self, filename, isdir=False):
-        fileinodenumber = self.searchfiledir(filename)
+        fileinodenumber = self.searchfiledir(filename)                                                                 
         if fileinodenumber is not None:
             raise FileSystemException("File Already Exists")
 
@@ -83,10 +83,16 @@ class LFSClass:
         # XXX - do this tomorrow! after the meteor shower!
         pass
 
-    # write all in memory data structures to disk
+    # write all in memory data structures disk
     def sync(self):
         # XXXDONE - do this tomorrow! after the meteor shower!
-        InodeMap.inodemap.save_inode_map(Inode.getmaxinode())
+
+        serialMap, generation = InodeMap.inodemap.save_inode_map(getmaxinode())
+        iminode = Inode()
+        iminode.write(0, serialMap, False) #Write inode map into special inode
+        iminodeloc = InodeMap.inodemap.lookup(iminode.id)
+        Segment.segmentmanager.update_inodemap_position(iminodeloc, generation)
+
         Segment.segmentmanager.flush()
 
     # restore in memory data structures (e.g. inode map) from disk
@@ -112,18 +118,22 @@ class LFSClass:
         dirs = path.split('/')
         
         #Start at root inode
-        currinodeaddress = InodeMap.inodemap.lookup(1)
-        currinode = Inode(str=Segment.segmentmanager.blockread(currinodeaddress))
+        currinodeno = 1
+        currinode = Inode(str=Segment.segmentmanager.blockread(InodeMap.inodemap.lookup(1)))
+
 
         #Go through directories in path
         for dirname in dirs:
+            foundmatch = False
             if currinode.isDirectory:
-                contents = currinode.read(0, 10000000) #Extract the directory contents
-                nextinodeid = re.findall('%s(\d+)' % dirname, contents)
-                if len(nextinodeid) > 0:
-                    nextinodeid = nextinodeid[0]
-                    currinode = Inode(str = Segment.segmentmanager.blockread(InodeMap.lookup(nextinodeid)))
-                else:
+                dd = DirectoryDescriptor(currinodeno)
+                for name, inodeid in dd.enumerate():
+                    if name == dirname:
+                        currinodeno = inodeid
+                        currinode = Inode(str = Segment.segmentmanager.blockread(InodeMap.inodemap.lookup(currinodeno)))
+                        foundmatch = True
+                        break
+                if not foundmatch:
                     return None
             else: 
                 if dirs[-1] != dirname:
