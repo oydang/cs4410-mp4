@@ -11,7 +11,7 @@ from Inode import Inode, getmaxinode, setmaxinode
 from InodeMap import InodeMapClass
 from FileDescriptor import FileDescriptor
 from DirectoryDescriptor import DirectoryDescriptor
-from Constants import FILENAMELEN
+from Constants import FILENAMELEN, DELETEDFILE
 from FSE import FileSystemException
 import Disk
 
@@ -81,7 +81,12 @@ class LFSClass:
     # delete the given file
     def unlink(self, pathname):
         # XXXDONE - do this tomorrow! after the meteor shower!
-        p = find_
+        inodenumber = self.searchfiledir(pathname)
+        if inodenumber is None:
+            raise FileSystemException("File Does Not Exist")
+        parentdd = self.open(find_parent_name(pathname), True)
+        parentdd.delete_entry(find_filename(pathname))
+
 
     # write all in memory data structures disk
     def sync(self):
@@ -130,9 +135,11 @@ class LFSClass:
                 dd = DirectoryDescriptor(currinodeno)
                 for name, inodeid in dd.enumerate():
                     if name == dirname:
-                        currinodeno = inodeid
-                        currinode = Inode(str = Segment.segmentmanager.blockread(InodeMap.inodemap.lookup(currinodeno)))
-                        foundmatch = True
+                        nodeaddr = InodeMap.inodemap.lookup(inodeid)
+                        if nodeaddr > 0:
+                            currinodeno = inodeid
+                            currinode = Inode(str = Segment.segmentmanager.blockread(nodeaddr))
+                            foundmatch = True
                         break
                 if not foundmatch:
                     return None

@@ -109,12 +109,14 @@ class Shell:
         LFS.filesystem.sync()
 
     def rm(self, args):
-        # XXX - do this tomorrow! after the meteor shower!
-        pass
+        # XXXDONE - do this tomorrow! after the meteor shower!
+        path = canonicalize(args[1], self.currentDirectory)
+        LFS.filesystem.unlink(path)
 
     def rmdir(self, args):
         # XXX - do this tomorrow! after the meteor shower!
-        pass
+        path = canonicalize(args[1], self.currentDirectory)
+        LFS.filesystem.unlink(path)
 
     def quit(self, args):
         print "\nSo Long, and Thanks for All the Fish!"

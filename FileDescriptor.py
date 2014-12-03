@@ -41,3 +41,11 @@ class FileDescriptor(object):
         inodeobject.write(self.position, data, False)
         self.position += len(data)
 
+    def _writetoposition(self, data, pos):
+        inodeobject = self._getinode()
+        inodeobject.write(pos, data, False)
+
+    def _readfromposition(self, readlength, pos):
+        inodeobject = self._getinode()
+        data = inodeobject.read(pos, readlength)
+        return data

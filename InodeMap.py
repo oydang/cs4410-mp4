@@ -15,6 +15,7 @@ class InodeMapClass:
     def lookup(self, inodeno):
         if not self.mapping.has_key(inodeno):
             print "Lookup for inode failed because that inode was never created", inodeno
+            return -1
         return self.mapping[inodeno]
 
     # following the write of an inode, update the
