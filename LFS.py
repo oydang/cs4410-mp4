@@ -3,11 +3,12 @@ import sys, struct
 import Segment
 import InodeMap
 import re
+import time
 
 from threading import Thread, Lock, Condition, Semaphore
 from Segment import SegmentManagerClass
 from Disk import DiskClass
-from Inode import Inode, getmaxinode, setmaxinode
+from Inode import Inode, getmaxinode, setmaxinode, getstalelock, remove_staleblock, getstaleblocks, getexiststales
 from InodeMap import InodeMapClass
 from FileDescriptor import FileDescriptor
 from DirectoryDescriptor import DirectoryDescriptor
@@ -171,5 +172,20 @@ class LFSClass:
     # and update the inode map
     def append_directory_entry(self, dirinode, filename, newinode):
         dirinode.write(dirinode.filesize, struct.pack("%dsI" % FILENAMELEN, filename, newinode.id))
+
+    #Thread that constantly cleans
+    def constantclean(self):
+        #Rest for 3 seconds
+        while True:
+            with getstalelock():
+                while len(getstaleblocks()) == 0:
+                    getexiststales().wait()
+                for blockno in getstaleblocks():
+                    if blockno > 0:
+                        Segment.segmentmanager.cleanblock(blockno)
+                        #Done cleaning, now remove
+                        remove_staleblock(blockno)
+                        print ('stale blocks is ' + str(getstaleblocks()))
+
 
 filesystem = None

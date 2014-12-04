@@ -49,3 +49,8 @@ class FileDescriptor(object):
         inodeobject = self._getinode()
         data = inodeobject.read(pos, readlength)
         return data
+
+    def _markstale(self):
+        inodeblocknumber = InodeMap.inodemap.lookup(self.inodenumber)
+        inodeobject = Inode(str=Segment.segmentmanager.blockread(inodeblocknumber))
+        inodeobject.recyclewholeinode()#DELETE ITSELF

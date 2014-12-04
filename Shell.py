@@ -51,6 +51,9 @@ class Shell:
         else:
             print ('restoring it!!!')
             LFS.filesystem.restore()
+        #Start the cleaner in the background
+        cleaner = Thread(target=LFS.filesystem.constantclean)
+        cleaner.start()
 
     def create(self, args):
         if len(args) != 3:

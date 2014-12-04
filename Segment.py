@@ -4,6 +4,7 @@ import Disk
 from FSE import FileSystemException
 
 from Constants import BLOCKSIZE, DISKSIZE, SEGMENTSIZE, NUMSEGMENTS
+from threading import Lock
 
 NUMBLOCKS = SEGMENTSIZE - 1 # number of blocks in a segment (one less than SEGMENTSIZE because of the superblock)
 
@@ -15,6 +16,7 @@ class SegmentManagerClass:
     def __init__(self):
         self.segcounter = 0
         self.currentseg = SegmentClass(self.segcounter)
+        self.segmentLocks = [Lock()] * NUMSEGMENTS      #A lock for each segment
 
     # write the given data to a free block in the current segment.
     # if no free block exists, find another segment with a free block in it
@@ -22,30 +24,39 @@ class SegmentManagerClass:
     def write_to_newblock(self, data):
         # XXXDONE - do this tomorrow! after the meteor shower!
         #First try to write to new block in current segment
+        self.segmentLocks[self.segcounter].acquire()
         blockaddr = self.currentseg.write_to_newblock(data)
+
         while blockaddr <= 0:
             #No free blocks in current segment
             self.flush()
+            self.segmentLocks[self.segcounter].release()
             #Create new currentseg
-            self.segcounter += 1
+            self.segcounter (self.segcounter + 1) % NUMSEGMENTS
+
+            self.segmentLocks[self.segcounter].acquire()
             self.currentseg = SegmentClass(self.segcounter)
             blockaddr = self.currentseg.write_to_newblock(data)
+        
+        self.segmentLocks[self.segcounter].release()    
         return blockaddr
 
     # read the requested block if it is in memory, if not, read it from disk
     def blockread(self, blockno):
-        if self.is_in_memory(blockno):
-            return self.read_in_place(blockno)
-        else:
-            return Disk.disk.blockread(blockno)
+        with self.segmentLocks[self.segcounter]:
+            if self.is_in_memory(blockno):
+                return self.read_in_place(blockno)
+            else:
+                return Disk.disk.blockread(blockno)
 
     # write the requested block, to the disk, or else to memory if
     # this block is part of the current segment
     def blockwrite(self, blockno, data):
-        if self.is_in_memory(blockno):
-            self.update_in_place(blockno, data)
-        else:
-            Disk.disk.blockwrite(blockno, data)
+        with self.segmentLocks[self.segcounter]:
+            if self.is_in_memory(blockno):
+                self.update_in_place(blockno, data)
+            else:
+                Disk.disk.blockwrite(blockno, data)
 
     # returns true if the given block disk address is currently in memory
     def is_in_memory(self, blockno):
@@ -85,6 +96,24 @@ class SegmentManagerClass:
                 maxgen = superblock.inodemapgeneration
                 imlocation = superblock.inodemaplocation
         return imlocation
+
+    #Cleans the blocks with the specified addresses
+    def cleanblock(self, addr):
+        blockoffset = (addr % SEGMENTSIZE) - 1
+        segmentno = (addr - (addr % SEGMENTSIZE))/SEGMENTSIZE
+        if self.is_in_memory(addr):
+            #Edit in superblock
+            with self.segmentLocks[self.segcounter]:
+                self.currentseg.superblock.blockinuse[blockoffset] = True
+        else:
+            #Fetch from disk
+            with self.segmentLocks[segmentno]:
+                segmentbase = segmentno * SEGMENTSIZE
+                superblock = SuperBlock(data=Disk.disk.blockread(segmentbase))
+                superblock.blockinuse[blockoffset] = False
+                Disk.disk.blockwrite(segmentbase, superblock.serialize())
+
+
 
 class SuperBlock:
     def __init__(self, data=None):

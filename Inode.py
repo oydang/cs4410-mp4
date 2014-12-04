@@ -3,18 +3,42 @@ import Disk
 import Segment
 import InodeMap
 
+from threading import Lock, Condition
 from InodeMap import InodeMapClass
 from Constants import BLOCKSIZE
 
 NUMDIRECTBLOCKS = 100 # can have as many as 252 and still fit an Inode in a 1024 byte block
 NUM_INDIRECTBLOCKS = 256 # Because an indirect block can hold 256 ints (256 = 1024/4)
 inodeidpool = 1  # 1 is reserved for the root inode
+stalelist = [] # Stale block addresses
+staleLock = Lock()
+existstales = Condition(staleLock)
 
 def getmaxinode():
     return inodeidpool
+
 def setmaxinode(maxii):
     global inodeidpool
     inodeidpool = maxii
+
+def getstaleblocks():
+    return stalelist
+
+def add_staleblock(blockaddr):
+    global stalelist
+    stalelist.append(blockaddr)
+    if len(stalelist) == 1:
+        existstales.notify()
+
+def remove_staleblock(blockaddr):
+    global stalelist
+    stalelist.remove(blockaddr)
+
+def getstalelock():
+    return staleLock
+
+def getexiststales():
+    return existstales
 
 class Inode:
     def __init__(self, str=None, isdirectory=False):
@@ -59,24 +83,30 @@ class Inode:
     # physical address for that block, updates the inode to
     # point to that particular block
     def _adddatablock(self, blockoffset, blockaddress):
-        if blockoffset < NUMDIRECTBLOCKS:
-            # place this block in one of the direct data blocks
-            self.fileblocks[blockoffset] = blockaddress
-        else:
-            # XXXDONE - do this after the meteor shower!
-            blockoffset -=  NUMDIRECTBLOCKS     #Now the indirect block offset
-            if self.indirectblock == 0:
-                #Need to create indirect block
-                fileblocks = [0] * NUM_INDIRECTBLOCKS
-                fileblocks[blockoffset] = blockaddress
-                data = struct.pack("%dI" % NUM_INDIRECTBLOCKS, *fileblocks)
-                self.indirectblock = Segment.segmentmanager.write_to_newblock(data)
+        with getstalelock():
+            if blockoffset < NUMDIRECTBLOCKS:
+                # place this block in one of the direct data blocks, mark old as stale
+                if self.fileblocks[blockoffset] > 0:
+                    add_staleblock(self.fileblocks[blockoffset])
+                self.fileblocks[blockoffset] = blockaddress
             else:
-                #Update old <blockoffset, blockaddr> mappings
-                oldmappings = list(struct.unpack("%dI" % NUM_INDIRECTBLOCKS, Segment.segmentmanager.blockread(self.indirectblock)))
-                oldmappings[blockoffset] = blockaddress
-                newdata = struct.pack("%dI" % NUM_INDIRECTBLOCKS, *oldmappings)
-                Segment.segmentmanager.blockwrite(self.indirectblock, newdata)
+                # XXXDONE - do this after the meteor shower!
+                blockoffset -=  NUMDIRECTBLOCKS     #Now the indirect block offset
+                if self.indirectblock == 0:
+                    #Need to create indirect block, don't need to add stale blocks
+                    fileblocks = [0] * NUM_INDIRECTBLOCKS
+                    fileblocks[blockoffset] = blockaddress
+                    data = struct.pack("%dI" % NUM_INDIRECTBLOCKS, *fileblocks)
+                    self.indirectblock = Segment.segmentmanager.write_to_newblock(data)
+                else:
+                    #Update old <blockoffset, blockaddr> mappings, collect stale block
+                    oldmappings = list(struct.unpack("%dI" % NUM_INDIRECTBLOCKS, Segment.segmentmanager.blockread(self.indirectblock)))
+                    if oldmappings[blockoffset] > 0:
+                        add_staleblock(oldmappings[blockoffset])
+                    oldmappings[blockoffset] = blockaddress
+                    newdata = struct.pack("%dI" % NUM_INDIRECTBLOCKS, *oldmappings)
+                    Segment.segmentmanager.blockwrite(self.indirectblock, newdata)
+            print 'the stale blocks are ' + str(getstaleblocks())
 
 
     #Return the address of the blockoffset^th block
@@ -121,6 +151,22 @@ class Inode:
             currentblock += 1
 
         return data[0:min(len(data), amounttoread)]
+
+    def recyclewholeinode (self):
+        #Make stale indirect blocks
+        with getstalelock():
+            inodeaddress = InodeMap.inodemap.lookup(self.id)
+            if inodeaddress > 0:
+                add_staleblock(inodeaddress)
+            for blockno in self.fileblocks:
+                if blockno > 0:
+                    add_staleblock(blockno)
+            if self.indirectblock > 0:
+                mappings = list(struct.unpack("%dI" % NUM_INDIRECTBLOCKS, Segment.segmentmanager.blockread(self.indirectblock)))
+                for blockno in mappings:
+                    if blockno > 0:
+                        add_staleblock(blockno)
+
 
     # perform a write of the given data, starting at the file offset
     # provided below.

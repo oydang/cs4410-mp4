@@ -33,10 +33,13 @@ class DirectoryDescriptor(FileDescriptor):
         for i in range(0, numentries):
             data = self.read(FILENAMELEN + 4)
             print ('data is %s' % data)
-            name, inode = struct.unpack("%dsI" % (FILENAMELEN,), data[0:(FILENAMELEN + 4)])
+            name, inodeno = struct.unpack("%dsI" % (FILENAMELEN,), data[0:(FILENAMELEN + 4)])
             name = name.strip('\x00')
             if name == filename:
-                #delete the entry!!
+                #Mark node as stale
+                fd = FileDescriptor(inodeno)
+                fd._markstale()
+                #delete the entry in this directory!!
                 self._writetoposition(DELETEDFILE, self.position - len(data))
                 print ('data %s has been deleted ' % data)
             print ('remaining is %s' % self._readfromposition(1000000, 0))
